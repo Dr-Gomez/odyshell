@@ -92,7 +92,12 @@ function Terminal(displayID, measure) {
   addResizeEvent(function () {
     self.terminalSize = measure.getMeasure();
     while (self.rows.length < self.terminalSize.y) {
-      self.rows.push("");
+      var currentRow = self.rows.length;
+      self.rows[currentRow] = "";
+      for (let col = 0; col < self.terminalSize.x; col++) {
+        self.rows[currentRow] += "\u00A0";
+      }
+
     }
     self.render();
   });
@@ -133,7 +138,6 @@ Terminal.prototype.write = function (message) {
         this.cursor.x = 0;
       }
     } else {
-      this.rows.shift();
       this.rows.push(message);
     }
     this.render();
