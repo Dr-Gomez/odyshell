@@ -36,9 +36,11 @@ function Measure(fontID, sampleText) {
     this.sampleSpan.textContent = sampleText;
   } else {
     var printableAscii = "";
+    
     for (var charCode = 32; charCode < 127; charCode++) {
       printableAscii += String.fromCharCode(charCode);
     }
+
     this.sampleSpan.textContent = printableAscii;
   }
 
@@ -61,7 +63,7 @@ function Measure(fontID, sampleText) {
     return this.screenSpace;
   };
 
-  addResizeEvent(function () {
+  addResizeEvent(function () { 
     self.update();
   });
 }
@@ -117,12 +119,20 @@ Terminal.prototype.wipe = function () {
 
 Terminal.prototype.render = function () {
   this.wipe();
-  for (let i = 0; i < this.rows.length; i++) {
-    this.display.innerHTML += "<div>" + this.rows[i] + "</div>";
+  for (this.renderIndex; this.renderIndex < this.rows.length; this.renderIndex++) {
+
+    var text = this.rows[this.renderIndex];
+    if (this.cursor.y == this.renderIndex) {
+      text = text.substring(0, this.cursor.x) + "<span class=\"cursor\">" + text.charAt(this.cursor.x) + "</span>" + text.substring(this.cursor.x + 1, text.length);
+    }
+
+    this.display.innerHTML += "<div>" + text + "</div>";
   }
+
 };
 
 Terminal.prototype.moveCursor = function (x, y) {
+  
   this.cursor.x = x;
   this.cursor.y = y;
 };
@@ -133,9 +143,17 @@ Terminal.prototype.write = function (message) {
 
       while (message.length > 0) {
         this.rows[this.cursor.y] = this.rows[this.cursor.y].replaceAt(this.cursor.x, message);
+        
+        var printedLength = message.length;
+        
         message = message.substring(this.terminalSize.x - this.cursor.x);
-        this.cursor.y++;
-        this.cursor.x = 0;
+
+        if (message.length == 0) {
+          this.cursor.x += printedLength;
+        } else {
+          this.cursor.y++;
+          this.cursor.x = 0;
+        }
       }
     } else {
       this.rows.push(message);
