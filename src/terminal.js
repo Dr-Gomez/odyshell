@@ -287,6 +287,14 @@ Terminal.prototype.write = function (message) {
   this.render();
 };
 
+Terminal.prototype.erase = function () {
+  var line = this.dataRows[this.cursor.y];
+  this.cursor.x -= 1;
+  line = line.substring(0, this.cursor.x) + line.substring(this.cursor.x + 1);
+  this.dataRows[this.cursor.y] = line;
+  this.reRender(this.cursor.y, this.cursor.y);
+}
+
 // Shell
 function Shell(host, user, terminal) {
   this.login(host, user);
@@ -316,7 +324,12 @@ Shell.prototype.prompt = function () {
 };
 
 Shell.prototype.userWrite = function (key) {
-  this.terminal.write(key);
+
+  if (key == "Backspace") {
+    this.terminal.erase();
+  } else {
+    this.terminal.write(key);
+  }
 }
 
 
