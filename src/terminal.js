@@ -1,4 +1,4 @@
-
+// String swap
 String.prototype.replaceAt = function (index, replacement) {
 
   if (replacement.length < -index || index >= this.length) {
@@ -9,31 +9,66 @@ String.prototype.replaceAt = function (index, replacement) {
     return this.substring(0, index) + replacement.substring(0, this.length - index) + this.substring(index + replacement.length)
   }
 
-}
+};
 
+// Listeners
 var resizeQueue = [];
 
 function addResizeEvent(functionReference) {
   resizeQueue.push(functionReference);
-}
+};
 
 window.onresize = function (event) {
   for (let functionIndex = 0; functionIndex < resizeQueue.length; functionIndex++) {
     resizeQueue[functionIndex](event);
   }
+};
+
+// KeyLogger
+function Catcher() {
+  this.logger = document.createElement("input");
+  this.logger.style.bottom = "100%";
+  this.logger.style.right = "100%"
+  this.logger.style.position = "absolute";
+  this.logger.style.width = "1px";
+  this.logger.style.height = "1em";
+  this.logger.style.padding = "0";
+  this.logger.style.border = "none";
+  this.logger.style.zIndex = "1";
+  this.logger.style.opacity = "0";
+  this.logger.style.whiteSpace = "pre";
+  document.body.appendChild(this.logger);
+
+  this.hear();
+
+};
+
+Catcher.prototype.hear = function () {
+  this.logger.focus();
 }
 
-function Measure(fontID, sampleText) {
+Catcher.prototype.stream = function (port) {
+  var self = this;
+
+  document.onkeydown = function (event) {
+    self.hear();
+    
+    port(event.key);
+  }
+}
+
+// Measure
+function Ruler(fontID, sampleText) {
   this.sampleSpan = document.createElement("span");
   this.sampleSpan.style.position = "absolute";
   this.sampleSpan.style.whiteSpace = "nowrap";
   this.sampleSpan.style.visibility = "hidden";
 
   document.body.appendChild(this.sampleSpan);
-  this.sampleSpan.style.fontFamily = fontID;
+  this.updateFont(fontID);
 
   if (typeof sampleText == "string") {
-    this.sampleSpan.textContent = sampleText;
+    this.updateSample(sampleText);
   } else {
     var printableAscii = "";
     
@@ -41,75 +76,89 @@ function Measure(fontID, sampleText) {
       printableAscii += String.fromCharCode(charCode);
     }
 
-    this.sampleSpan.textContent = printableAscii;
+    this.updateSample(printableAscii);
   }
 
-  this.update = function () {
-    var sampleRect = this.sampleSpan.getBoundingClientRect();
-    var sampleSizeY = sampleRect.height;
-    var textWidth = this.sampleSpan.textContent.length;
-    var sampleSizeX = sampleRect.width / textWidth;
-
-    this.screenSpace = {
-      y: Math.floor(window.innerHeight / sampleSizeY),
-      x: Math.floor(window.innerWidth / sampleSizeX)
-    };
-  };
+  this.measure();
 
   var self = this;
-  self.update();
-
-  this.getMeasure = function () {
-    return this.screenSpace;
-  };
 
   addResizeEvent(function () { 
-    self.update();
+    self.measure();
   });
-}
+};
 
-function Terminal(displayID, measure) {
+Ruler.prototype.measure = function () {
+  var sampleRect = this.sampleSpan.getBoundingClientRect();
+  var sampleSizeY = sampleRect.height;
+  var textWidth = this.sampleSpan.textContent.length;
+  var sampleSizeX = sampleRect.width / textWidth;
+
+  this.screenSpace = {
+    y: Math.floor(window.innerHeight / sampleSizeY),
+    x: Math.floor(window.innerWidth / sampleSizeX)
+  };
+};
+
+Ruler.prototype.updateFont = function (fontID) {
+  this.sampleSpan.style.fontFamily = fontID;
+};
+
+Ruler.prototype.updateSample = function (sampleText) {
+  this.sampleSpan.textContent = sampleText;
+};
+
+Ruler.prototype.getMeasure = function () {
+  return this.screenSpace;
+};
+
+// Terminal
+function Terminal(displayID, measure, catcher) {
   this.display = document.getElementById(displayID);
 
   this.cursor = { x: 0, y: 0 };
-
-  this.sampleText = document.getElementById("measure");
-  this.sampleMeasure = this.sampleText.getBoundingClientRect();
-
-  measure.update();
-  this.terminalSize = measure.getMeasure();
-
+  
   this.renderIndex = 0;
 
-  this.rows = new Array(this.terminalSize.y);
-  for (let row = 0; row < this.rows.length; row++) {
-    this.rows[row] = "";
-    for (let col = 0; col < this.terminalSize.x; col++) {
-      this.rows[row] += "\u00A0";
-    }
-  }
+  this.dataRows = new Array();
+  this.outputRows = new Array();
 
+  this.adjust(measure);
+  this.listen(catcher);
+  
+  this.blank();
+  
+  this.render();
+  this.wipe();
+  
   var self = this;
 
   addResizeEvent(function () {
-    self.terminalSize = measure.getMeasure();
-    while (self.rows.length < self.terminalSize.y) {
-      var currentRow = self.rows.length;
-      self.rows[currentRow] = "";
-      for (let col = 0; col < self.terminalSize.x; col++) {
-        self.rows[currentRow] += "\u00A0";
-      }
-
-    }
+    self.blank();
     self.render();
   });
+
+
+};
+
+Terminal.prototype.adjust = function (measure) {
+  this.measure = measure;
+  this.terminalSize = measure.getMeasure();
+  this.render();
+};
+
+Terminal.prototype.listen = function (catcher) {
+  this.catcher = catcher;
 }
 
-Terminal.canMessage = function (message) {
-  if (typeof message == "undefined" || (typeof message == "object" && message == null)) {
-    return false;
+Terminal.prototype.blank = function () {
+  while (this.dataRows.length < this.terminalSize.y) {
+    var currentRow = this.dataRows.length;
+    this.dataRows[currentRow] = "";
+    for (let col = 0; col < this.terminalSize.x; col++) {
+      this.dataRows[currentRow] += "\u00A0";
+    }
   }
-  return true;
 };
 
 Terminal.prototype.wipe = function () {
@@ -118,75 +167,163 @@ Terminal.prototype.wipe = function () {
 };
 
 Terminal.prototype.render = function () {
-  this.wipe();
-  for (this.renderIndex; this.renderIndex < this.rows.length; this.renderIndex++) {
+  for (this.renderIndex; this.renderIndex < this.dataRows.length; this.renderIndex++) {
 
-    var text = this.rows[this.renderIndex];
+    var text = this.dataRows[this.renderIndex];
+    var line = document.createElement("div");
+
     if (this.cursor.y == this.renderIndex) {
-      text = text.substring(0, this.cursor.x) + "<span class=\"cursor\">" + text.charAt(this.cursor.x) + "</span>" + text.substring(this.cursor.x + 1, text.length);
-    }
+      
+      var preCursorText = text.substring(0, this.cursor.x);
+      var preCursorTextNode = document.createTextNode(preCursorText);
 
-    this.display.innerHTML += "<div>" + text + "</div>";
-  }
+      line.appendChild(preCursorTextNode);
 
-};
+      var cursorSpan = document.createElement("span");
+      cursorSpan.className = "cursor";
+      
+      var cursorText = text.charAt(this.cursor.x);
+      var cursorTextNode = document.createTextNode(cursorText);
 
-Terminal.prototype.moveCursor = function (x, y) {
-  
-  this.cursor.x = x;
-  this.cursor.y = y;
-};
+      cursorSpan.appendChild(cursorTextNode);
 
-Terminal.prototype.write = function (message) {
-  if (Terminal.canMessage(message)) {
-    if (this.cursor.y < this.rows.length) {
+      line.appendChild(cursorSpan);
 
-      while (message.length > 0) {
-        this.rows[this.cursor.y] = this.rows[this.cursor.y].replaceAt(this.cursor.x, message);
-        
-        var printedLength = message.length;
-        
-        message = message.substring(this.terminalSize.x - this.cursor.x);
+      var postCursorText = text.substring(this.cursor.x + 1, text.length);
+      var postCursorTextNode = document.createTextNode(postCursorText);
 
-        if (message.length == 0) {
-          this.cursor.x += printedLength;
-        } else {
-          this.cursor.y++;
-          this.cursor.x = 0;
-        }
-      }
+      line.appendChild(postCursorTextNode);
+
     } else {
-      this.rows.push(message);
+      var textNode = document.createTextNode(text);
+      line.appendChild(textNode);
     }
-    this.render();
-  } else {
-    console.log("MESSAGE ERR: Message is of an unsupported type.");
+
+    this.outputRows[this.renderIndex] = line;
+
+    this.display.appendChild(line);
   }
+
 };
 
+Terminal.prototype.reRender = function (startIndex, endIndex) {
+  for (let reRenderIndex = startIndex; reRenderIndex <= endIndex; reRenderIndex++) {
 
-function Shell(host, user) {
-  this.host = host;
-  this.user = user;
-  this.terminal = null;
+    var text = this.dataRows[reRenderIndex];
+    var line = this.outputRows[reRenderIndex];
 
-  this.connect = function (terminal) {
-    this.terminal = terminal;
-    this.prompt();
-  };
+    line.innerHTML = "";
 
-  this.prompt = function () {
-    if (this.terminal) {
-      this.terminal.write(this.user + "@" + this.host + ":~$ ");
+    if (this.cursor.y == reRenderIndex) {
+
+      var preCursorText = text.substring(0, this.cursor.x);
+      var preCursorTextNode = document.createTextNode(preCursorText);
+
+      line.appendChild(preCursorTextNode);
+
+      var cursorSpan = document.createElement("span");
+      cursorSpan.className += "cursor";
+      
+      var cursorText = text.charAt(this.cursor.x);
+      var cursorTextNode = document.createTextNode(cursorText);
+
+      cursorSpan.appendChild(cursorTextNode);
+
+      line.appendChild(cursorSpan);
+
+      var postCursorText = text.substring(this.cursor.x + 1, text.length);
+      var postCursorTextNode = document.createTextNode(postCursorText);
+
+      line.appendChild(postCursorTextNode);
+
+    } else {
+      var textNode = document.createTextNode(text);
+      line.appendChild(textNode);
     }
-  };
+
+  }
 }
 
-(function () {
-  var measure = new Measure('"Courier New", Courier, monospace', "My");
+Terminal.prototype.write = function (message) {
+  
+  var overwrite = false;
+  var startIndex = 0;
 
-  var terminal = new Terminal("lines", measure);
-  var shell = new Shell("lagann3001", "Marco");
-  shell.connect(terminal);
-  terminal.render();
-})();
+  if (this.cursor.y < this.dataRows.length) {
+
+    if (this.cursor.y <= this.outputRows.length) {
+
+      if (overwrite == false) {
+        overwrite = true;
+        startIndex = this.cursor.y;
+        endIndex = this.cursor.y
+      } else {
+        endIndex = this.cursor.y
+      }
+    }
+
+    while (message.length > 0) {
+      this.dataRows[this.cursor.y] = this.dataRows[this.cursor.y].replaceAt(this.cursor.x, message);
+      
+      var printedLength = message.length;
+      
+      message = message.substring(this.terminalSize.x - this.cursor.x);
+
+      if (message.length == 0) {
+        this.cursor.x += printedLength;
+      } else {
+        this.cursor.y++;
+        this.cursor.x = 0;
+      }
+    }
+  } else {
+    this.dataRows[this.dataRows.length](message);
+  }
+
+  if (overwrite == true) {
+    this.reRender(startIndex, endIndex);
+  }
+
+  this.render();
+};
+
+// Shell
+function Shell(host, user, terminal) {
+  this.login(host, user);
+  this.connect(terminal);
+
+  var self = this;
+
+  this.terminal.catcher.stream(
+    function (key) {
+      self.userWrite(key);
+    }
+  )
+};
+
+Shell.prototype.connect = function (terminal) {
+  this.terminal = terminal;
+  this.prompt();
+};
+
+Shell.prototype.login = function (host, user) {
+  this.host = host,
+  this.user = user;
+};
+
+Shell.prototype.prompt = function () {
+  this.terminal.write(this.user + "@" + this.host + ":~$ ");
+};
+
+Shell.prototype.userWrite = function (key) {
+  this.terminal.write(key);
+}
+
+
+void function () {
+  var measure = new Ruler('"Courier New", Courier, monospace', "My");
+  var catcher = new Catcher();
+
+  var terminal = new Terminal("lines", measure, catcher);
+  var shell = new Shell("lagann", "Don", terminal);
+}();

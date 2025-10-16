@@ -22,11 +22,12 @@ html, body {
   display: block;
   color: white;
   overflow-y: auto;
+  overflow-x: hidden;
+  user-select: text;
 
   text-shadow:
     0 0 3px rgba(160, 160, 255, 0.7),
     0 0 6px rgba(160, 160, 255, 0.5);
-
 }
 
 #measure {
@@ -40,7 +41,7 @@ html, body {
 
 @keyframes blink {
   50% {
-    background-color: transparent;
+    background-color: rgba(0, 0, 0, 1);
     color: inherit;
     box-shadow: inherit;
     text-shadow: inherit;
@@ -48,8 +49,7 @@ html, body {
 }
 
 .cursor {
-  background-color: aliceblue;
-  color: black;
+  background-color: lightblue;
   box-shadow: none;
   text-shadow: none;
   animation: blink 1s step-start infinite;
