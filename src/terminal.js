@@ -326,7 +326,11 @@ Shell.prototype.prompt = function () {
 Shell.prototype.userWrite = function (key) {
 
   if (key == "Backspace") {
-    this.terminal.erase();
+
+    if (this.terminal.cursor.x > this.user.length + 1 + this.host.length + 4) {
+      this.terminal.erase();
+    }
+
   } else {
     this.terminal.write(key);
   }
