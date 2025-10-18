@@ -288,11 +288,30 @@ Terminal.prototype.write = function (message) {
 };
 
 Terminal.prototype.erase = function () {
-  var line = this.dataRows[this.cursor.y];
-  this.cursor.x -= 1;
-  line = line.substring(0, this.cursor.x) + line.substring(this.cursor.x + 1);
+  
+  var line = "";
+  var startY = this.cursor.y;
+
+  if (this.cursor.x == 0) {
+    if (this.cursor.y == 0) {
+      return;
+    }
+    
+    this.cursor.y--;
+    
+    var line = this.dataRows[this.cursor.y];
+    this.cursor.x = line.length - 1;
+    
+    line = line.replaceAt(this.cursor.x, " ");
+  } else {
+    this.cursor.x -= 1;
+    var line = this.dataRows[this.cursor.y];
+    line = line.replaceAt(this.cursor.x, " ");
+  }
+  
   this.dataRows[this.cursor.y] = line;
-  this.reRender(this.cursor.y, this.cursor.y);
+  this.reRender(this.cursor.y, startY);
+  this.render();
 }
 
 // Shell
