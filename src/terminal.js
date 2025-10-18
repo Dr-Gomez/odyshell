@@ -320,18 +320,21 @@ Shell.prototype.login = function (host, user) {
 };
 
 Shell.prototype.prompt = function () {
-  this.terminal.write(this.user + "@" + this.host + ":~$ ");
+  this.promptText = this.user + "@" + this.host + ":~$ ";
+  this.promptLength = this.promptText.length;
+  this.promptLine = this.terminal.cursor.y
+  this.terminal.write(this.promptText);
 };
 
 Shell.prototype.userWrite = function (key) {
 
   if (key == "Backspace") {
 
-    if (this.terminal.cursor.x > this.user.length + 1 + this.host.length + 4) {
+    if (this.terminal.cursor.y != this.promptLine || this.terminal.cursor.x > this.promptLength) {
       this.terminal.erase();
     }
 
-  } else {
+  } else if (key.length == 1) {
     this.terminal.write(key);
   }
 }
