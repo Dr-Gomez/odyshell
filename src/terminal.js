@@ -11,6 +11,16 @@ String.prototype.replaceAt = function (index, replacement) {
 
 };
 
+String.prototype.repeat = function (times) {
+  var repeatedString = "";
+  
+  for (let charIndex = 0; charIndex < times; charIndex++) {
+    repeatedString += this;
+  }
+
+  return repeatedString;
+}
+
 // Listeners
 var resizeQueue = [];
 
@@ -154,10 +164,7 @@ Terminal.prototype.listen = function (catcher) {
 Terminal.prototype.blank = function () {
   while (this.dataRows.length < this.terminalSize.y) {
     var currentRow = this.dataRows.length;
-    this.dataRows[currentRow] = "";
-    for (let col = 0; col < this.terminalSize.x; col++) {
-      this.dataRows[currentRow] += "\u00A0";
-    }
+    this.dataRows[currentRow] = "\u00A0".repeat(this.terminalSize.x);
   }
 };
 
@@ -277,7 +284,7 @@ Terminal.prototype.write = function (message) {
       }
     }
   } else {
-    this.dataRows[this.dataRows.length](message);
+    this.dataRows[this.dataRows.length] = message + "\u00A0".repeat(this.terminal.x - message.length);
   }
 
   if (overwrite == true) {
@@ -312,6 +319,45 @@ Terminal.prototype.erase = function () {
   this.dataRows[this.cursor.y] = line;
   this.reRender(this.cursor.y, startY);
   this.render();
+}
+
+Terminal.prototype.shift = function (direction) {
+
+  if (direction == "Left") {
+    if (this.cursor.x == 0) {
+
+      if (this.cursor.y == 0) {
+        return;
+      } 
+      
+      else {
+        this.cursor.y--;
+        this.cursor.x = this.terminalSize.x - 1;
+        return;
+      }
+
+    } else {
+      this.cursor.x--;
+      this.reRender(this.cursor.y, this.cursor.y)
+    }
+
+  } else if (direction == "Right") {
+    if (this.cursor.x == this.terminalSize.x - 1) {
+
+      if (this.cursor.y == this.dataRows.length - 1) {
+        return;
+      } else {
+        this.cursor.y++;
+        this.cursor.x = 0;
+      }
+      
+    } else {
+      this.cursor.x++;
+      this.reRender(this.cursor.y, this.cursor.y);
+    }
+  }
+
+  this.reRender(this.cursor.y, this.cursor.y);
 }
 
 // Shell
@@ -353,6 +399,10 @@ Shell.prototype.userWrite = function (key) {
       this.terminal.erase();
     }
 
+  } else if (key == "ArrowLeft") {
+    this.terminal.shift(-1);
+  } else if (key == "ArrowRight") {
+    this.terminal.shift(1);
   } else if (key.length == 1) {
     this.terminal.write(key);
   }
