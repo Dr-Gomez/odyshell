@@ -323,6 +323,8 @@ Terminal.prototype.erase = function () {
 
 Terminal.prototype.shift = function (direction) {
 
+  console.log("yo")
+
   if (direction == "Left") {
     if (this.cursor.x == 0) {
 
@@ -400,9 +402,9 @@ Shell.prototype.userWrite = function (key) {
     }
 
   } else if (key == "ArrowLeft") {
-    this.terminal.shift(-1);
+    this.terminal.shift("Left");
   } else if (key == "ArrowRight") {
-    this.terminal.shift(1);
+    this.terminal.shift("Right");
   } else if (key.length == 1) {
     this.terminal.write(key);
   }
