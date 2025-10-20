@@ -393,16 +393,24 @@ Shell.prototype.prompt = function () {
   this.terminal.write(this.promptText);
 };
 
+Shell.prototype.canClaim = function () {
+  if (this.terminal.cursor.y != this.promptLine || this.terminal.cursor.x > this.promptLength) {
+    return true;
+  }
+
+  return false;
+}
+
 Shell.prototype.userWrite = function (key) {
 
   if (key == "Backspace") {
-
-    if (this.terminal.cursor.y != this.promptLine || this.terminal.cursor.x > this.promptLength) {
+    if (this.canClaim()) {
       this.terminal.erase();
     }
-
   } else if (key == "ArrowLeft") {
-    this.terminal.shift("Left");
+    if (this.canClaim()) {
+      this.terminal.shift("Left");
+    }
   } else if (key == "ArrowRight") {
     this.terminal.shift("Right");
   } else if (key.length == 1) {
