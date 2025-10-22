@@ -1,4 +1,4 @@
-// String swap
+// String helpers
 String.prototype.replaceAt = function (index, replacement) {
 
   if (replacement.length < -index || index >= this.length) {
@@ -11,6 +11,10 @@ String.prototype.replaceAt = function (index, replacement) {
 
 };
 
+String.prototype.sandwichAt = function (index, sandwich) {
+  return this.substring(0, index) + sandwich + this.substring(index + sandwich.length - 1);
+}
+
 String.prototype.repeat = function (times) {
   var repeatedString = "";
   
@@ -21,8 +25,16 @@ String.prototype.repeat = function (times) {
   return repeatedString;
 }
 
+// Object helpers
+
+Object.prototype.assign = function (target) {
+  for (let key in target) {
+    this[key] = target[key];
+  }
+}
+
 // Listeners
-var resizeQueue = [];
+var resizeQueue = new Array();
 
 function addResizeEvent(functionReference) {
   resizeQueue.push(functionReference);
@@ -151,15 +163,21 @@ function Terminal(displayID, measure, catcher) {
 
 };
 
+// Terminal Resize
+
 Terminal.prototype.adjust = function (measure) {
   this.measure = measure;
   this.terminalSize = measure.getMeasure();
   this.render();
 };
 
+// Terminal Input Select
+
 Terminal.prototype.listen = function (catcher) {
   this.catcher = catcher;
 }
+
+// Terminal Data Reset
 
 Terminal.prototype.blank = function () {
   while (this.dataRows.length < this.terminalSize.y) {
@@ -168,10 +186,24 @@ Terminal.prototype.blank = function () {
   }
 };
 
+// Terminal Line Cursor Reset
+
+Terminal.prototype.pullCursor = function () {
+  this.cursor.x = 0;
+}
+
+Terminal.prototype.pushCursor = function () {
+  this.cursor.x = this.terminalSize.x - 1;
+}
+
+// Terminal Display Reset
+
 Terminal.prototype.wipe = function () {
   this.renderIndex = 0;
   this.display.innerHTML = "";
 };
+
+// Terminal clean-line render
 
 Terminal.prototype.render = function () {
   for (this.renderIndex; this.renderIndex < this.dataRows.length; this.renderIndex++) {
@@ -213,6 +245,8 @@ Terminal.prototype.render = function () {
 
 };
 
+// Terminal dirty-line render
+
 Terminal.prototype.reRender = function (startIndex, endIndex) {
   for (let reRenderIndex = startIndex; reRenderIndex <= endIndex; reRenderIndex++) {
 
@@ -247,9 +281,11 @@ Terminal.prototype.reRender = function (startIndex, endIndex) {
       var textNode = document.createTextNode(text);
       line.appendChild(textNode);
     }
-
+    
   }
 }
+
+// Terminal write at cursor
 
 Terminal.prototype.write = function (message) {
   
@@ -294,6 +330,8 @@ Terminal.prototype.write = function (message) {
   this.render();
 };
 
+// Terminal erase at cursor
+
 Terminal.prototype.erase = function () {
   
   var line = "";
@@ -321,9 +359,9 @@ Terminal.prototype.erase = function () {
   this.render();
 }
 
-Terminal.prototype.shift = function (direction) {
+// Terminal user movement
 
-  console.log("yo")
+Terminal.prototype.shift = function (direction) {
 
   if (direction == "Left") {
     if (this.cursor.x == 0) {
@@ -365,6 +403,8 @@ Terminal.prototype.shift = function (direction) {
 // Shell
 function Shell(host, user, terminal) {
   this.login(host, user);
+  
+  this.command = "";
   this.connect(terminal);
 
   var self = this;
@@ -388,6 +428,7 @@ Shell.prototype.login = function (host, user) {
 
 Shell.prototype.prompt = function () {
   this.promptText = this.user + "@" + this.host + ":~$ ";
+  this.command += this.promptText;
   this.promptLength = this.promptText.length;
   this.promptLine = this.terminal.cursor.y
   this.terminal.write(this.promptText);
@@ -405,7 +446,13 @@ Shell.prototype.userWrite = function (key) {
 
   if (key == "Backspace") {
     if (this.canClaim()) {
-      this.terminal.erase();
+      var startCursorX = this.terminal.cursor.x;
+      var stringPosition = this.terminal.cursor.x + this.terminal.terminalSize.x * (this.terminal.cursor.y - this.promptLine);
+      this.command = this.command.substring(0, stringPosition - 1) + this.command.substring(stringPosition);
+      this.terminal.pullCursor();
+      this.terminal.write(this.command + "\u00A0".repeat(this.terminal.terminalSize.x - this.command.length));
+      this.terminal.cursor.x = startCursorX - 1;
+      this.terminal.reRender(this.terminal.cursor.y, this.terminal.cursor.y);
     }
   } else if (key == "ArrowLeft") {
     if (this.canClaim()) {
@@ -414,7 +461,13 @@ Shell.prototype.userWrite = function (key) {
   } else if (key == "ArrowRight") {
     this.terminal.shift("Right");
   } else if (key.length == 1) {
-    this.terminal.write(key);
+    var startCursorX = this.terminal.cursor.x;
+    var stringPosition = this.terminal.cursor.x + this.terminal.terminalSize.x * (this.terminal.cursor.y - this.promptLine);
+    this.command = this.command.sandwichAt(stringPosition, key);
+    this.terminal.pullCursor();
+    this.terminal.write(this.command);
+    this.terminal.cursor.x = startCursorX + 1;
+    this.terminal.reRender(this.terminal.cursor.y, this.terminal.cursor.y);
   }
 }
 

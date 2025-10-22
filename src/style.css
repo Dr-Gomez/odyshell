@@ -41,16 +41,17 @@ html, body {
 
 @keyframes blink {
   50% {
-    background-color: rgba(0, 0, 0, 1);
-    color: inherit;
-    box-shadow: inherit;
-    text-shadow: inherit;
+    color: aqua;
+    background-color: white;
+    box-shadow: none;
+    text-shadow: none;
   }
 }
 
 .cursor {
-  background-color: lightblue;
-  box-shadow: none;
-  text-shadow: none;
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0);
+  box-shadow: inherit;
+  text-shadow: inherit;
   animation: blink 1s step-start infinite;
 }
